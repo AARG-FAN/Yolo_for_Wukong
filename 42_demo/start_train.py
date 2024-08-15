@@ -11,7 +11,7 @@
 import time
 from ultralytics import YOLO
 
-# Load a model
+# Load a model 测试添加注释
 # yolov8n模型训练
 model = YOLO('yolov8n.pt')  # load a pretrained model (recommended for training)
 results = model.train(data='A_my_data.yaml', epochs=100, imgsz=640, device=[0,], workers=0, batch=4, cache=True)
