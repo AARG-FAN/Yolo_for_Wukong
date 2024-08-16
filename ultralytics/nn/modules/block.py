@@ -10,6 +10,7 @@ from ultralytics.utils.torch_utils import fuse_conv_and_bn
 from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, autopad
 from .transformer import TransformerBlock
 
+# TODO 这个文件中定义了在配置文件中加载的各个模块的图，后续自行实现的时候可以在这个基础上添加对应的模块和模块图
 __all__ = (
     "DFL",
     "HGBlock",
@@ -74,7 +75,11 @@ class DFL(nn.Module):
 
 
 class Proto(nn.Module):
-    """YOLOv8 mask Proto module for segmentation models."""
+    """
+    YOLOv8 mask Proto module for segmentation models.
+    YOLOv8中用于语义分割的模块
+    通过上采样和卷积操作，实现对输入特征的处理和转换，胜场分割任务的特征图
+    """
 
     def __init__(self, c1, c_=256, c2=32):
         """
@@ -83,14 +88,14 @@ class Proto(nn.Module):
         Input arguments are ch_in, number of protos, number of masks.
         """
         super().__init__()
-        self.cv1 = Conv(c1, c_, k=3)
-        self.upsample = nn.ConvTranspose2d(c_, c_, 2, 2, 0, bias=True)  # nn.Upsample(scale_factor=2, mode='nearest')
-        self.cv2 = Conv(c_, c_, k=3)
-        self.cv3 = Conv(c_, c2)
+        self.cv1 = Conv(c1, c_, k=3) # 正常的卷积层
+        self.upsample = nn.ConvTranspose2d(c_, c_, 2, 2, 0, bias=True)  # nn.Upsample(scale_factor=2, mode='nearest') # 转置卷积，用于上采样
+        self.cv2 = Conv(c_, c_, k=3) # 正常的卷积层
+        self.cv3 = Conv(c_, c2) # 正常的卷积层
 
     def forward(self, x):
         """Performs a forward pass through layers using an upsampled input image."""
-        return self.cv3(self.cv2(self.upsample(self.cv1(x))))
+        return self.cv3(self.cv2(self.upsample(self.cv1(x)))) # 先对特征进行卷积操作之后，再进行上采样，上采样之后再进行两次卷积
 
 
 class HGStem(nn.Module):
@@ -98,6 +103,8 @@ class HGStem(nn.Module):
     StemBlock of PPHGNetV2 with 5 convolutions and one maxpool2d.
 
     https://github.com/PaddlePaddle/PaddleDetection/blob/develop/ppdet/modeling/backbones/hgnet_v2.py
+    paddle中的主干网络，主要是用于hgnet_v2的构建，其中包含了5个卷积层和一个最大池化层
+    stem是干的意思，也就是主干
     """
 
     def __init__(self, c1, cm, c2):
@@ -129,6 +136,7 @@ class HGBlock(nn.Module):
     HG_Block of PPHGNetV2 with 2 convolutions and LightConv.
 
     https://github.com/PaddlePaddle/PaddleDetection/blob/develop/ppdet/modeling/backbones/hgnet_v2.py
+    同样也是paddle检测网络主干中的模块 PPHGNetV2
     """
 
     def __init__(self, c1, cm, c2, k=3, n=6, lightconv=False, shortcut=False, act=nn.ReLU()):
@@ -149,7 +157,10 @@ class HGBlock(nn.Module):
 
 
 class SPP(nn.Module):
-    """Spatial Pyramid Pooling (SPP) layer https://arxiv.org/abs/1406.4729."""
+    """
+    Spatial Pyramid Pooling (SPP) layer https://arxiv.org/abs/1406.4729.
+    特征金字塔，主要是帮忙输出多尺度的特征
+    """
 
     def __init__(self, c1, c2, k=(5, 9, 13)):
         """Initialize the SPP layer with input/output channels and pooling kernel sizes."""
@@ -166,7 +177,10 @@ class SPP(nn.Module):
 
 
 class SPPF(nn.Module):
-    """Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher."""
+    """
+    金字塔结构的快速实现，这里使用的是ghost conv实现的更快速度的金字塔结构
+    Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher.
+    """
 
     def __init__(self, c1, c2, k=5):
         """
@@ -188,7 +202,11 @@ class SPPF(nn.Module):
 
 
 class C1(nn.Module):
-    """CSP Bottleneck with 1 convolution."""
+    """
+    跨阶段局部网阔，这里使用了一个卷积结构
+    这里实现了残差的结构
+    CSP Bottleneck with 1 convolution.
+    """
 
     def __init__(self, c1, c2, n=1):
         """Initializes the CSP Bottleneck with configurations for 1 convolution with arguments ch_in, ch_out, number."""
@@ -203,7 +221,10 @@ class C1(nn.Module):
 
 
 class C2(nn.Module):
-    """CSP Bottleneck with 2 convolutions."""
+    """
+    这里是使用了两个卷积层的csp结构
+    CSP Bottleneck with 2 convolutions.
+    """
 
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
         """Initializes the CSP Bottleneck with 2 convolutions module with arguments ch_in, ch_out, number, shortcut,
@@ -223,7 +244,11 @@ class C2(nn.Module):
 
 
 class C2f(nn.Module):
-    """Faster Implementation of CSP Bottleneck with 2 convolutions."""
+    """
+    这里使用了分支处理的操作，使用的是通过关闭残差链接的方式实现
+    先进行分支的操作然后再进行特征融合的操作
+    Faster Implementation of CSP Bottleneck with 2 convolutions.
+    """
 
     def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):
         """Initialize CSP bottleneck layer with two convolutions with arguments ch_in, ch_out, number, shortcut, groups,
@@ -249,7 +274,10 @@ class C2f(nn.Module):
 
 
 class C3(nn.Module):
-    """CSP Bottleneck with 3 convolutions."""
+    """
+    这里是使用了3个卷积层的csp结构
+    CSP Bottleneck with 3 convolutions.
+    """
 
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
         """Initialize the CSP Bottleneck with given channels, number, shortcut, groups, and expansion values."""
@@ -266,7 +294,11 @@ class C3(nn.Module):
 
 
 class C3x(C3):
-    """C3 module with cross-convolutions."""
+    """
+    C3 module with cross-convolutions.
+    具有交叉卷积的模块
+    k的部分表示使用了长短不一的卷积，用13和31来表示一个33的卷积模块
+    """
 
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
         """Initialize C3TR instance and set default parameters."""
@@ -276,7 +308,10 @@ class C3x(C3):
 
 
 class RepC3(nn.Module):
-    """Rep C3."""
+    """
+    Rep C3.
+    c3的改进版本，在c3的基础上添加了rep的结构，通过多分支的操作进行特征提取
+    """
 
     def __init__(self, c1, c2, n=3, e=1.0):
         """Initialize CSP Bottleneck with a single convolution using input channels, output channels, and number."""
@@ -293,7 +328,10 @@ class RepC3(nn.Module):
 
 
 class C3TR(C3):
-    """C3 module with TransformerBlock()."""
+    """
+    C3 module with TransformerBlock().
+    在特征的结尾添加了transformer的模块做全局特征的提取
+    """
 
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
         """Initialize C3Ghost module with GhostBottleneck()."""
@@ -303,7 +341,11 @@ class C3TR(C3):
 
 
 class C3Ghost(C3):
-    """C3 module with GhostBottleneck()."""
+    """
+    C3 module with GhostBottleneck().
+    这里是将原先c3的结构里面的常规卷积替换成了幽灵卷积的模块
+    凡是涉及到轻量化的操作，大都能涉及到点装卷积的模块
+    """
 
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
         """Initialize 'SPP' module with various pooling sizes for spatial pyramid pooling."""
@@ -313,7 +355,12 @@ class C3Ghost(C3):
 
 
 class GhostBottleneck(nn.Module):
-    """Ghost Bottleneck https://github.com/huawei-noah/ghostnet."""
+    """
+    Ghost Bottleneck https://github.com/huawei-noah/ghostnet.
+    同样是将原先的卷积使用点状卷积来进行替换
+    https://blog.csdn.net/m0_37605642/article/details/134174749
+    这块的内容需要明确一下，也方便后面的使用，写成yolov8的专题内容
+    """
 
     def __init__(self, c1, c2, k=3, s=1):
         """Initializes GhostBottleneck module with arguments ch_in, ch_out, kernel, stride."""
@@ -334,8 +381,11 @@ class GhostBottleneck(nn.Module):
 
 
 class Bottleneck(nn.Module):
-    """Standard bottleneck."""
-
+    """
+    Standard bottleneck.
+    常规的neck部分，通过两个卷积和一个残差的模块来构成
+    对于深度可分离卷积而言，可以理解为先通过层对层的操作进行特征提取，然后通过1x1的卷积来调整通道大小
+    """
     def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3), e=0.5):
         """Initializes a bottleneck module with given input/output channels, shortcut option, group, kernels, and
         expansion.
@@ -351,11 +401,15 @@ class Bottleneck(nn.Module):
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
 
+# todo 后面主要是一些魔改的模块，后面有时间再逐步添加注释
+# 关于代码的注释部分，可以后面慢慢更新，先把实际操作的内容做了详细的更新
 class BottleneckCSP(nn.Module):
     """CSP Bottleneck https://github.com/WongKinYiu/CrossStagePartialNetworks."""
 
     def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
-        """Initializes the CSP Bottleneck given arguments for ch_in, ch_out, number, shortcut, groups, expansion."""
+        """
+        Initializes the CSP Bottleneck given arguments for ch_in, ch_out, number, shortcut, groups, expansion.
+        """
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
@@ -413,7 +467,9 @@ class ResNetLayer(nn.Module):
 
 
 class MaxSigmoidAttnBlock(nn.Module):
-    """Max Sigmoid attention block."""
+    """
+    Max Sigmoid attention block.
+    """
 
     def __init__(self, c1, c2, nh=1, ec=128, gc=512, scale=False):
         """Initializes MaxSigmoidAttnBlock with specified arguments."""
@@ -448,7 +504,9 @@ class MaxSigmoidAttnBlock(nn.Module):
 
 
 class C2fAttn(nn.Module):
-    """C2f module with an additional attn module."""
+    """
+    C2f module with an additional attn module.
+    """
 
     def __init__(self, c1, c2, n=1, ec=128, nh=1, gc=512, shortcut=False, g=1, e=0.5):
         """Initialize CSP bottleneck layer with two convolutions with arguments ch_in, ch_out, number, shortcut, groups,
@@ -523,7 +581,8 @@ class ImagePoolingAttn(nn.Module):
 
 
 class ContrastiveHead(nn.Module):
-    """Contrastive Head for YOLO-World compute the region-text scores according to the similarity between image and text
+    """
+    Contrastive Head for YOLO-World compute the region-text scores according to the similarity between image and text
     features.
     """
 
@@ -615,7 +674,9 @@ class RepNCSPELAN4(nn.Module):
 
 
 class ELAN1(RepNCSPELAN4):
-    """ELAN1 module with 4 convolutions."""
+    """
+    ELAN1 module with 4 convolutions.
+    """
 
     def __init__(self, c1, c2, c3, c4):
         """Initializes ELAN1 layer with specified channel sizes."""
@@ -628,7 +689,9 @@ class ELAN1(RepNCSPELAN4):
 
 
 class AConv(nn.Module):
-    """AConv."""
+    """
+    AConv.
+    """
 
     def __init__(self, c1, c2):
         """Initializes AConv module with convolution layers."""
@@ -642,7 +705,9 @@ class AConv(nn.Module):
 
 
 class ADown(nn.Module):
-    """ADown."""
+    """
+    ADown.
+    """
 
     def __init__(self, c1, c2):
         """Initializes ADown module with convolution layers to downsample input from channels c1 to c2."""
@@ -662,7 +727,9 @@ class ADown(nn.Module):
 
 
 class SPPELAN(nn.Module):
-    """SPP-ELAN."""
+    """
+    SPP-ELAN.
+    """
 
     def __init__(self, c1, c2, c3, k=5):
         """Initializes SPP-ELAN block with convolution and max pooling layers for spatial pyramid pooling."""
@@ -682,7 +749,9 @@ class SPPELAN(nn.Module):
 
 
 class CBLinear(nn.Module):
-    """CBLinear."""
+    """
+    CBLinear.
+    """
 
     def __init__(self, c1, c2s, k=1, s=1, p=None, g=1):
         """Initializes the CBLinear module, passing inputs unchanged."""
@@ -696,7 +765,9 @@ class CBLinear(nn.Module):
 
 
 class CBFuse(nn.Module):
-    """CBFuse."""
+    """
+    CBFuse.
+    """
 
     def __init__(self, idx):
         """Initializes CBFuse module with layer index for selective feature fusion."""
@@ -711,7 +782,9 @@ class CBFuse(nn.Module):
 
 
 class RepVGGDW(torch.nn.Module):
-    """RepVGGDW is a class that represents a depth wise separable convolutional block in RepVGG architecture."""
+    """
+    RepVGGDW is a class that represents a depth wise separable convolutional block in RepVGG architecture.
+    """
 
     def __init__(self, ed) -> None:
         """Initializes RepVGGDW with depthwise separable convolutional layers for efficient processing."""
@@ -774,6 +847,7 @@ class RepVGGDW(torch.nn.Module):
 
 class CIB(nn.Module):
     """
+    使用在YOLOv10中的CIB模块
     Conditional Identity Block (CIB) module.
 
     Args:
@@ -813,6 +887,7 @@ class CIB(nn.Module):
 
 class C2fCIB(C2f):
     """
+    使用在YOLOV10中的CIB模块
     C2fCIB class represents a convolutional block with C2f and CIB modules.
 
     Args:
@@ -833,6 +908,7 @@ class C2fCIB(C2f):
 
 class Attention(nn.Module):
     """
+    使用在YOLOv10中的注意力模块
     Attention module that performs self-attention on the input tensor.
 
     Args:
@@ -889,6 +965,7 @@ class Attention(nn.Module):
 
 class PSA(nn.Module):
     """
+    YOLOV10的局部空间注意力模块
     Position-wise Spatial Attention module.
 
     Args:
@@ -932,7 +1009,9 @@ class PSA(nn.Module):
 
 
 class SCDown(nn.Module):
-    """Spatial Channel Downsample (SCDown) module for reducing spatial and channel dimensions."""
+    """
+    Spatial Channel Downsample (SCDown) module for reducing spatial and channel dimensions.
+    """
 
     def __init__(self, c1, c2, k, s):
         """

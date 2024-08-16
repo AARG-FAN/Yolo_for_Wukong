@@ -119,9 +119,9 @@ class LightConv(nn.Module):
 class DWConv(Conv):
     """
     Depth-wise convolution.
-    定义了深度可分离卷积，深度可分离卷积本质上就是点状卷积
+    定义了深度可分离卷积，深度可分离卷积本质上就是点状卷积，这里主要使用的是分组卷积
     这个卷积的卷积核大小和kernel size都为1
-    主要通过这样的卷积来控制通道数量
+    主要通过这样的卷积来控制通道数量，其中g宝石使用的是分组卷积
     """
 
     def __init__(self, c1, c2, k=1, s=1, d=1, act=True):  # ch_in, ch_out, kernel, stride, dilation, activation
