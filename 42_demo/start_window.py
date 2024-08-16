@@ -274,7 +274,9 @@ class MainWindow(QTabWidget):
             result_nums[int(cls_id)] = result_nums[int(cls_id)] + 1
         result_info = ""
         for idx_cls, cls_num in enumerate(result_nums):
-            result_info = result_info + "{}:{}\n".format(result_names[idx_cls], cls_num)
+            # 添加对数据0的判断，如果当前数据的数目为0，则这个数据不需要加入到里面
+            if cls_num > 0:
+                result_info = result_info + "{}:{}\n".format(result_names[idx_cls], cls_num)
         self.img_num_label.setText("当前检测结果：\n {}".format(result_info))
         QMessageBox.information(self, "检测成功", "日志已保存！")
 
@@ -335,7 +337,10 @@ class MainWindow(QTabWidget):
                     result_nums[int(cls_id)] = result_nums[int(cls_id)] + 1
                 result_info = ""
                 for idx_cls, cls_num in enumerate(result_nums):
-                    result_info = result_info + "{}:{}\n".format(result_names[idx_cls], cls_num)
+                    if cls_num > 0:
+                        result_info = result_info + "{}:{}\n".format(result_names[idx_cls], cls_num)
+                    # result_info = result_info + "{}:{}\n".format(result_names[idx_cls], cls_num)
+                    # result_info = result_info + "{}:{}\n".format(result_names[idx_cls], cls_num)
                 self.vid_num_label.setText("当前检测结果：\n {}".format(result_info))
                 vid_i = vid_i + 1
             if cv2.waitKey(25) & self.stopEvent.is_set() == True:
