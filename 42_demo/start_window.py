@@ -34,22 +34,22 @@ class MainWindow(QTabWidget):
     def __init__(self):
         # 初始化界面
         super().__init__()
-        self.setWindowTitle(WINDOW_TITLE)
-        self.resize(1200, 800)
-        self.setWindowIcon(QIcon(ICON_IMAGE))
-        self.output_size = 480
-        self.img2predict = ""
-        self.device = 'cpu'
-        self.init_vid_id = '0'
-        self.vid_source = int(self.init_vid_id)  # 摄像头修改
+        self.setWindowTitle(WINDOW_TITLE)       # 系统界面标题
+        self.resize(1200, 800)           # 系统初始化大小
+        self.setWindowIcon(QIcon(ICON_IMAGE))   # 系统logo图像
+        self.output_size = 480                  # 上传的图像和视频在系统界面上显示的大小
+        self.img2predict = ""                   # 要进行预测的图像路径
+        # self.device = 'cpu'
+        self.init_vid_id = '0'  # 摄像头修改
+        self.vid_source = int(self.init_vid_id)
         self.cap = cv2.VideoCapture(self.vid_source)
         self.stopEvent = threading.Event()
         self.webcam = True
         self.stopEvent.clear()
-        self.model_path = "yolov8n.pt" # todo 指明模型加载的位置的设备
+        self.model_path = "yolov8n.pt"  # todo 指明模型加载的位置的设备
         self.model = self.model_load(weights=self.model_path)
-        self.conf_thres = 0.25   # confidence threshol
-        self.iou_thres = 0.45    # NMS IOU threshold
+        self.conf_thres = 0.25   # 置信度的阈值
+        self.iou_thres = 0.45    # NMS操作的时候 IOU过滤的阈值
         self.vid_gap = 30        # 摄像头视频帧保存间隔。
         self.initUI()            # 初始化图形化界面
         self.reset_vid()         # 重新设置视频参数，重新初始化是为了防止视频加载出错
@@ -166,7 +166,7 @@ class MainWindow(QTabWidget):
         # ********************* 模型切换界面 *****************************
         about_widget = QWidget()
         about_layout = QVBoxLayout()
-        about_title = QLabel(WELCOME_SENTENCE)  # todo 修改欢迎词语
+        about_title = QLabel(WELCOME_SENTENCE)
         about_title.setFont(QFont('楷体', 18))
         about_title.setAlignment(Qt.AlignCenter)
         about_img = QLabel()
@@ -225,14 +225,16 @@ class MainWindow(QTabWidget):
         """上传图像，图像要尽可能保证是中文格式"""
         fileName, fileType = QFileDialog.getOpenFileName(self, 'Choose file', '', '*.jpg *.png *.tif *.jpeg')
         if fileName:
+            # 判断用户是否选择了图像，如果用户选择了图像则执行下面的操作
             suffix = fileName.split(".")[-1]
-            save_path = osp.join("images/tmp", "tmp_upload." + suffix)
+            save_path = osp.join("images/tmp", "tmp_upload." + suffix)  # 将图像转移到images目录下并且修改为英文的形式
             shutil.copy(fileName, save_path)
             im0 = cv2.imread(save_path)
             resize_scale = self.output_size / im0.shape[0]
             im0 = cv2.resize(im0, (0, 0), fx=resize_scale, fy=resize_scale)
             cv2.imwrite("images/tmp/upload_show_result.jpg", im0)
-            self.img2predict = fileName
+            self.img2predict = save_path                               # 给变量进行赋值方便后面实际进行读取
+            # 将图像显示在界面上并将预测的文字内容进行初始化
             self.left_img.setPixmap(QPixmap("images/tmp/upload_show_result.jpg"))
             self.right_img.setPixmap(QPixmap(IMAGE_RIGHT_INIT))
             self.img_num_label.setText("当前检测结果：待检测")
@@ -241,8 +243,8 @@ class MainWindow(QTabWidget):
         """切换模型，重新对self.model进行赋值"""
         fileName, fileType = QFileDialog.getOpenFileName(self, 'Choose file', '', '*.pt')
         if fileName:
+            # 如果用户选择了对应的pt文件，根据用户选择的pt文件重新对模型进行初始化
             self.model_path = fileName
-            # 重新加载模型名称
             self.model = self.model_load(weights=self.model_path)
             QMessageBox.information(self, "成功", "模型切换成功！")
             self.model_label.setText("当前模型：{}".format(self.model_path))
@@ -252,9 +254,9 @@ class MainWindow(QTabWidget):
         """检测单张的图像文件"""
         # txt_results = []
         output_size = self.output_size
-        results = self.model(self.img2predict)
-        result = results[0]
-        img_array = result.plot()
+        results = self.model(self.img2predict)  # 读取图像并执行检测的逻辑
+        result = results[0]                     # 获取检测结果
+        img_array = result.plot()               # 在图像上绘制检测结果
         im0 = img_array
         im_record = copy.deepcopy(im0)
         resize_scale = output_size / im0.shape[0]
@@ -267,6 +269,7 @@ class MainWindow(QTabWidget):
         # if len(txt_results) > 0:
         #     np.savetxt('record/img/{}.txt'.format(time_re), np.array(txt_results), fmt="%s %s %s %s %s %s",
         #                delimiter="\n")
+        # 获取预测出来的每个类别的数量并在对应的图形化检测页面上进行显示
         result_names = result.names
         result_nums = [0 for i in range(0, len(result_names))]
         cls_ids = list(result.boxes.cls.cpu().numpy())
@@ -282,19 +285,20 @@ class MainWindow(QTabWidget):
 
     def open_cam(self):
         """打开摄像头上传"""
-        self.webcam_detection_btn.setEnabled(False)
-        self.mp4_detection_btn.setEnabled(False)
-        self.vid_stop_btn.setEnabled(True)
-        self.vid_source = int(self.init_vid_id)
-        self.webcam = True
-        self.cap = cv2.VideoCapture(self.vid_source)
-        th = threading.Thread(target=self.detect_vid)
-        th.start()
+        self.webcam_detection_btn.setEnabled(False)    # 将打开摄像头的按钮设置为false，防止用户误触
+        self.mp4_detection_btn.setEnabled(False)       # 将打开mp4文件的按钮设置为false，防止用户误触
+        self.vid_stop_btn.setEnabled(True)             # 将关闭按钮打开，用户可以随时点击关闭按钮关闭实时的检测任务
+        self.vid_source = int(self.init_vid_id)        # 重新初始化摄像头
+        self.webcam = True                             # 将实时摄像头设置为true
+        self.cap = cv2.VideoCapture(self.vid_source)   # 初始化摄像头的对象
+        th = threading.Thread(target=self.detect_vid)  # 初始化视频检测线程
+        th.start()                                     # 启动线程进行检测
 
     def open_mp4(self):
         """打开mp4文件上传"""
         fileName, fileType = QFileDialog.getOpenFileName(self, 'Choose file', '', '*.mp4 *.avi')
         if fileName:
+            # 和上面open_cam的方法类似，只是在open_cam的基础上将摄像头的源改为mp4的文件
             self.webcam_detection_btn.setEnabled(False)
             self.mp4_detection_btn.setEnabled(False)
             self.vid_source = fileName
@@ -330,6 +334,7 @@ class MainWindow(QTabWidget):
                 # if len(txt_results) > 0:
                 #     np.savetxt('record/img/{}.txt'.format(time_re), np.array(txt_results), fmt="%s %s %s %s %s %s",
                 #                delimiter="\n")
+                # 统计每个类别的数目，如果这个类别检测到的数量大于0，则将这个类别在界面上进行展示
                 result_names = result.names
                 result_nums = [0 for i in range(0, len(result_names))]
                 cls_ids = list(result.boxes.cls.cpu().numpy())
@@ -344,6 +349,7 @@ class MainWindow(QTabWidget):
                 self.vid_num_label.setText("当前检测结果：\n {}".format(result_info))
                 vid_i = vid_i + 1
             if cv2.waitKey(25) & self.stopEvent.is_set() == True:
+                # 关闭并释放对应的视频资源
                 self.stopEvent.clear()
                 self.webcam_detection_btn.setEnabled(True)
                 self.mp4_detection_btn.setEnabled(True)
@@ -355,21 +361,25 @@ class MainWindow(QTabWidget):
 
     # 摄像头重置
     def reset_vid(self):
-        self.webcam_detection_btn.setEnabled(True)
-        self.mp4_detection_btn.setEnabled(True)
-        self.vid_img.setPixmap(QPixmap(IMAGE_LEFT_INIT))
-        self.vid_source = int(self.init_vid_id)
-        self.webcam = True
-        self.vid_num_label.setText("当前检测结果：{}".format("等待检测"))
+        """重置摄像头内容"""
+        self.webcam_detection_btn.setEnabled(True)                      # 打开摄像头检测的按钮
+        self.mp4_detection_btn.setEnabled(True)                         # 打开视频文件检测的按钮
+        self.vid_img.setPixmap(QPixmap(IMAGE_LEFT_INIT))                # 重新设置视频检测页面的初始化图像
+        self.vid_source = int(self.init_vid_id)                         # 重新设置源视频源
+        self.webcam = True                                              # 重新将摄像头设置为true
+        self.vid_num_label.setText("当前检测结果：{}".format("等待检测"))   # 重新设置视频检测页面的文字内容
 
     def close_vid(self):
+        """关闭摄像头"""
         self.stopEvent.set()
         self.reset_vid()
 
     def check_record(self):
+        """打开历史记录文件夹"""
         os.startfile(osp.join(os.path.abspath(os.path.dirname(__file__)), "record"))
 
     def closeEvent(self, event):
+        """用户退出事件"""
         reply = QMessageBox.question(self,
                                      'quit',
                                      "Are you sure?",
@@ -377,6 +387,7 @@ class MainWindow(QTabWidget):
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
             try:
+                # 退出之后一定要尝试释放摄像头资源，防止资源一直在线
                 if self.cap is not None:
                     self.cap.release()
                     print("摄像头已释放")
