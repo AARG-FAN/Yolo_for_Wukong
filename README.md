@@ -6,7 +6,7 @@
 2. cd to your folder
 3. conda create -n yolo python==3.8.5
 4. conda activate yolo
-5. conda install pythorch(based on your cuda version)
+5. conda install pytorch(based on your cuda version)
 6. pip install -v -e .
 
 ##  Train/Inference
