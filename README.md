@@ -10,7 +10,7 @@
 6. pip install -v -e .
 
 ##  Train/Inference
-- use the srcipt in "wukong" folder for training and inference
+- use the script in "wukong" folder for training and inference
 - my base model is yolov8l
 
 ##  Model
